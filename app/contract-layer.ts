@@ -2,12 +2,15 @@ import "./adapter";
 
 import {
   Keypair,
+  SorobanDataBuilder,
   Transaction,
+  TransactionBuilder,
   hash,
   scValToNative,
   xdr,
 } from "@stellar/stellar-sdk";
 import { Client, Entry, networks } from "../contract/client/src/index";
+import { AssembledTransaction } from "@stellar/stellar-sdk/contract";
 // import { getAuthenticatedUser } from '../auth/logic';
 // import { decrypt } from 'src/util/encryption';
 
@@ -102,7 +105,7 @@ export const invest = async (ipfs_hash: string, amount: number) => {
       ipfs_hash,
       amount: BigInt(amount),
     },
-    defaultOptions
+    { ...defaultOptions }
   );
 
   const jsonFromRoot = tx.toJSON();
@@ -117,14 +120,51 @@ export const invest = async (ipfs_hash: string, amount: number) => {
 
   const txRoot = contract.fromJSON["invest"](jsonFromUser);
 
+  const bumpedResourceFee = xdr.Int64.fromString(
+    (
+      Number(txRoot.simulationData.transactionData.resourceFee()) + 100000
+    ).toString()
+  );
+
+  //   console.log("bumped resource fee", bumpedResourceFee);
+
+  //   const newSorobanData = new SorobanDataBuilder(
+  //     txRoot.simulationData.transactionData
+  //   )
+  //     .setResourceFee(bumpedResourceFee.toBigInt())
+  //     .build();
+
+  //   txRoot.raw?.setSorobanData(newSorobanData).build();
+
+  //   const finalTx = await txRoot.simulate();
+
+  //   const result = await finalTx.signAndSend();
+
+  console.log(
+    "setting new tx data",
+    txRoot.simulationData!.transactionData.toXDR()
+  );
+
+  const newSorobanData = new SorobanDataBuilder(
+    txRoot.simulationData!.transactionData.toXDR()
+  )
+    .setResourceFee(bumpedResourceFee.toBigInt())
+    .build();
+
+  console.log({ newSorobanData });
+  console.log({ tx: txRoot.built! });
+
+  txRoot.built = TransactionBuilder.cloneFrom(txRoot.built!, {
+    fee: txRoot.built!.fee,
+    sorobanData: newSorobanData,
+  }).build();
+
   const result = await txRoot.signAndSend();
 
   console.log(
     "simulated fee",
-    result.assembled.simulationData.transactionData.resourceFee
+    result.assembled.simulationData.transactionData.resourceFee()
   );
-
-  console.log("actual fee", result);
 
   // console.log('send res', result.sendTransactionResponseAll);
   // console.log('get res', result.getTransactionResponseAll);
@@ -141,7 +181,7 @@ export const invest = async (ipfs_hash: string, amount: number) => {
     .forEach((event) => {
       // console.log(event);
       // console.log('event', event.event().body().v0().data().toXDR('base64'));
-      console.log(scValToNative(event.event().body().v0().data()));
+      //   console.log(scValToNative(event.event().body().v0().data()));
     });
 
   return result.getTransactionResponse;
