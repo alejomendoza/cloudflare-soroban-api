@@ -12,7 +12,7 @@
     "contract:redeploy": "rm -r ./contract/.vars && npm run contract:setup"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "12.0.1",
+    "@stellar/stellar-sdk": "12.1.0",
     "axios": "^1.7.2",
     "next": "14.2.3",
     "react": "^18.3.1",

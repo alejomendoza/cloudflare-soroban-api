@@ -18,7 +18,7 @@ xdr curr (1a04392432dacc0092caaeae22a600ea1af3c6a5)
 
 2. `npm i`
 
-3. `npm run contract:redeploy`
+3. `npm run contract:setup` if it's the first time running it, `npm run contract:redeploy` if you want to deploy to a new contract
 
 4. `npm run preview`
 
