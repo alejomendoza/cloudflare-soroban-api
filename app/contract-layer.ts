@@ -23,6 +23,18 @@ const sourceKeys = Keypair.fromSecret(
   "SB6NGNDLFKMRK4XW2W5OWFMJ2LIJ5SBXJU2X5TRSPXR2UNDOXHHZNKWY"
 );
 
+const fetchCurrentLedger = async () => {
+  const url = "https://horizon-testnet.stellar.org";
+  try {
+    const response = await fetch(url);
+    const data: any = await response.json();
+    return data.core_latest_ledger;
+  } catch (error) {
+    console.error("Error fetching current ledger:", error);
+    return null;
+  }
+};
+
 const defaultOptions = { timeoutInSeconds: 60, fee: 100000000 };
 
 function getClientForKeypair(keys: Keypair) {
@@ -111,20 +123,15 @@ export const invest = async (ipfs_hash: string, amount: number) => {
 
   const txUser = userClient.fromJSON["invest"](jsonFromRoot);
 
-  await txUser.signAuthEntries();
+  const ledger = (await fetchCurrentLedger()) + 100;
+
+  await txUser.signAuthEntries({ expiration: ledger });
 
   const jsonFromUser = txUser.toJSON();
 
   const txRoot = contract.fromJSON["invest"](jsonFromUser);
 
   const result = await txRoot.signAndSend();
-
-  console.log(
-    "simulated fee",
-    result.assembled.simulationData.transactionData.resourceFee
-  );
-
-  console.log("actual fee", result);
 
   // console.log('send res', result.sendTransactionResponseAll);
   // console.log('get res', result.getTransactionResponseAll);
@@ -138,7 +145,7 @@ export const invest = async (ipfs_hash: string, amount: number) => {
     .v3()
     .sorobanMeta()
     ?.diagnosticEvents()
-    .forEach((event) => {
+    .forEach((event: any) => {
       // console.log(event);
       // console.log('event', event.event().body().v0().data().toXDR('base64'));
       console.log(scValToNative(event.event().body().v0().data()));
